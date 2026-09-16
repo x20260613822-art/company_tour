@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>天津先锋企业参观汇报 - 沉浸式互动体验</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f2f4f8; color: #333; padding: 15px; }
+    .container { max-width: 500px; margin: 0 auto; }
+    
+    .header-card { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .header-card h1 { font-size: 20px; margin-bottom: 8px; }
+    .header-card p { font-size: 13px; opacity: 0.9; }
+    
+    .progress-box { margin-top: 15px; background: rgba(255,255,255,0.2); border-radius: 10px; height: 10px; overflow: hidden; }
+    .progress-bar { height: 100%; width: 0%; background: #00f2fe; transition: width 0.4s ease; }
+    .progress-text { font-size: 12px; margin-top: 6px; text-align: right; }
+
+    .company-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s; border-left: 5px solid #2a5298; }
+    .company-card:active { transform: scale(0.98); }
+    .company-card.done { border-left-color: #00c853; background-color: #f9fbf9; }
+    .tag { display: inline-block; font-size: 11px; background: #eef2f7; color: #2a5298; padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; }
+    .company-title { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+    .company-desc { font-size: 13px; color: #666; line-height: 1.4; }
+    .status-tag { margin-top: 10px; font-size: 12px; text-align: right; font-weight: bold; color: #2a5298; }
+    .done .status-tag { color: #00c853; }
+
+    .modal-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+    .modal-mask.active { display: flex; }
+    .modal-content { background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; animation: pop 0.3s ease; }
+    @keyframes pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+    .scene-box { background: #f0f4f9; border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 13px; line-height: 1.5; color: #444; }
+    .scene-badge { color: #d32f2f; font-weight: bold; }
+    .opt-btn { width: 100%; text-align: left; background: #f8f9fa; border: 1px solid #e0e0e0; padding: 12px; border-radius: 8px; margin-top: 10px; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+    .opt-btn:active { background: #e3f2fd; border-color: #2196f3; }
+    .close-btn { width: 100%; background: #ccc; border: none; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 14px; cursor: pointer; }
+
+    .report-btn { display: none; width: 100%; background: linear-gradient(135deg, #11998e, #38ef7d); color: white; border: none; padding: 14px; border-radius: 25px; font-size: 16px; font-weight: bold; margin-top: 10px; box-shadow: 0 4px 10px rgba(56,239,125,0.3); cursor: pointer; }
+    .report-result { font-size: 13px; line-height: 1.6; white-space: pre-line; background: #fff; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px dashed #38ef7d; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header-card">
+    <h1>🏢 天津先锋企业参观汇报</h1>
+    <p>点击下方卡片进入现场模拟，解锁汇报成果</p>
+    <div class="progress-box">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-text" id="progressText">已解锁：0 / 4</div>
+  </div>
+
+  <div id="companyList"></div>
+
+  <button class="report-btn" id="reportBtn" onclick="generateReport()">🎉 一键生成最终汇报 PPT 提纲</button>
+  <div id="reportBox"></div>
+</div>
+
+<div class="modal-mask" id="interactiveModal">
+  <div class="modal-content">
+    <h3 id="modalTitle">企业挑战</h3>
+    <div class="scene-box">
+      <span class="scene-badge">【沉浸模拟】</span>
+      <span id="modalScene">情景描述加载中...</span>
+    </div>
+    <p style="font-weight: bold; font-size: 14px;" id="modalQuestion">问题：</p>
+    <div id="modalOptions"></div>
+    <button class="close-btn" onclick="closeModal()">暂不挑战</button>
+  </div>
+</div>
+
+<script>
+  const companies = [
+    {
+      id: 'haihe',
+      name: '海河乳品智慧工厂',
+      tag: '智能制造 / 生鲜冷链',
+      desc: '探索全自动化无菌灌装与数字孪生追溯系统。',
+      completed: false,
+      scene: '你站在中央控制室，冷链检测仪突发预警，批次#8821牛奶在冷藏库温度出现异常波动！',
+      question: '作为现场精益生产主管，你如何通过智慧工厂系统快速响应？',
+      options: [
+        { text: 'A. 启动数字孪生系统，一键定位故障管道并自动调配备用冷库', correct: true, feedback: '🎯 正确！智慧工厂秒级响应，成功保全产品质量！' },
+        { text: 'B. 安排工人逐个进库用温度计测量', correct: false, feedback: '⚠️ 响应太慢！传统方式无法满足智慧工厂的实时管控要求。' }
+      ]
+    },
+    {
+      id: 'tdg',
+      name: '天津数字经济产业集团',
+      tag: '算力引擎 / 数据要素',
+      desc: '体验工业互联网大脑与数据要素算力调度。',
+      completed: false,
+      scene: '你在数据大屏前，某制造企业请求接入“工业互联网大脑”进行能耗优化降本。',
+      question: '你建议采用哪种数字方案帮助客户落地？',
+      options: [
+        { text: 'A. 部署 AI 算法模型，结合边缘计算实时动态调节设备功率', correct: true, feedback: '🎯 太棒了！帮助企业成功降本增效 18%，形成典型数字赋能案例！' },
+        { text: 'B. 仅给对方安装传统电表', correct: false, feedback: '⚠️ 无法实现智能化，未能发挥数字集团的数据赋能优势。' }
+      ]
+    },
+    {
+      id: 'dynasty',
+      name: '王朝酒业',
+      tag: '传统工艺 / 数字化发酵',
+      desc: '深入地下大酒窖，品味传统酿造与现代化风味控制。',
+      completed: false,
+      scene: '进入地下橡木桶酒窖，首席酿酒师邀请你共同测定今年高端赤霞珠的陈酿风味。',
+      question: '在保持传统工艺的同时，如何用现代科技保障风味稳定？',
+      options: [
+        { text: 'A. 完全凭经验判断，不使用任何测量仪器', correct: false, feedback: '⚠️ 风味可能受环境波动影响，难以保证批次标准化。' },
+        { text: 'B. 引入温湿度传感器与气相色谱微观风味建模', correct: true, feedback: '🎯 完美组合！传统匠心+现代数字技术，成就高品质酿造！' }
+      ]
+    },
+    {
+      id: 'zhonggang',
+      name: '天津重钢机械',
+      tag: '重型装备 / 高精制造',
+      desc: '感受大国重器的精密焊接与高端非标装备制造。',
+      completed: false,
+      scene: '车间正在加工出口海外的超大型桥梁构件，对焊接缝精度要求达到微米级。',
+      question: '面对非标重型构件，重钢机械的核心制造优势是什么？',
+      options: [
+        { text: 'A. 采用焊接机器人协同与无损探伤检测一体化方案', correct: true, feedback: '🎯 打卡成功！展现了重钢机械精益求精的高端制造实力！' },
+        { text: 'B. 全依靠人工锤打与手动焊接', correct: false, feedback: '⚠️ 无法满足微米级高精度及国际标准化交付要求。' }
+      ]
+    }
+  ];
+
+  let activeIndex = null;
+
+  function render() {
+    const listEl = document.getElementById('companyList');
+    listEl.innerHTML = '';
+    
+    let completedCount = 0;
+
+    companies.forEach((comp, index) => {
+      if(comp.completed) completedCount++;
+      
+      const card = document.createElement('div');
+      card.className = `company-card ${comp.completed ? 'done' : ''}`;
+      card.onclick = () => openModal(index);
+      card.innerHTML = `
+        <span class="tag">${comp.tag}</span>
+        <div class="company-title">${comp.name}</div>
+        <div class="company-desc">${comp.desc}</div>
+        <div class="status-tag">${comp.completed ? '✅ 汇报材料已归档' : '🔍 点击开启情景模拟'}</div>
+      `;
+      listEl.appendChild(card);
+    });
+
+    const pct = (completedCount / companies.length) * 100;
+    document.getElementById('progressBar').style.width = `${pct}%`;
+    document.getElementById('progressText').innerText = `已解锁：${completedCount} / ${companies.length}`;
+
+    if (completedCount === companies.length) {
+      document.getElementById('reportBtn').style.display = 'block';
+    }
+  }
+
+  function openModal(index) {
+    if (companies[index].completed) {
+      alert('该企业的情景模拟已完成，成果已归档！');
+      return;
+    }
+    activeIndex = index;
+    const comp = companies[index];
+    document.getElementById('modalTitle').innerText = comp.name;
+    document.getElementById('modalScene').innerText = comp.scene;
+    document.getElementById('modalQuestion').innerText = '⚡ 现场挑战：' + comp.question;
+
+    const optContainer = document.getElementById('modalOptions');
+    optContainer.innerHTML = '';
+    comp.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'opt-btn';
+      btn.innerText = opt.text;
+      btn.onclick = () => handleSelect(opt);
+      optContainer.appendChild(btn);
+    });
+
+    document.getElementById('interactiveModal').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('interactiveModal').classList.remove('active');
+  }
+
+  function handleSelect(option) {
+    alert(option.feedback);
+    if (option.correct) {
+      companies[activeIndex].completed = true;
+      closeModal();
+      render();
+    }
+  }
+
+  function generateReport() {
+    const reportBox = document.getElementById('reportBox');
+    reportBox.innerHTML = `
+      <div class="report-result">
+        <strong>📋 《四家先锋企业参观考察汇总汇报》提纲：</strong><br><br>
+        <strong>1. 海河乳品智慧工厂：</strong> 全链条数字孪生追溯，展现高度自动化的生鲜安全保障。<br>
+        <strong>2. 天津数字经济集团：</strong> 算力与工业大脑协同，实证数据要素赋能实体产业降本增效。<br>
+        <strong>3. 王朝酒业：</strong> 传统非遗酿造结合微观风味数据建模，实现品质标准化与科技赋能。<br>
+        <strong>4. 天津重钢机械：</strong> 智能机器人焊接与精密探伤结合，凸显大国重器非标高精制造优势。
+      </div>
+    `;
+  }
+
+  render();
+</script>
+</body>
+</html>
